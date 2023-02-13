@@ -188,9 +188,7 @@ if (MIDI.read()) {
   // -------------------- Note Off
   if (MIDI.getType() == midi::NoteOff && MIDI.getChannel() == MIDI_CHANNEL) {
     midiNote = MIDI.getData1();
-    if (susOn == false) {
       noteOff(midiNote);
-    }
     for (int i = 0; i < NUM_VOICES; i++) {
       Serial.print(i);
       Serial.print(": ");
