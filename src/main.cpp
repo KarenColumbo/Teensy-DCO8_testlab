@@ -19,9 +19,21 @@ uint16_t benderValue = 0;
 uint8_t midiTempo;
 uint8_t midiController[10];
 bool susOn = false;
+uint8_t midiNote = 0;
+uint8_t velocity = 0;
+uint16_t pitchBend = 0;
+uint8_t aftertouch = 0;
+uint8_t modulationWheel = 0;
+uint8_t ccNumber = 0;
+uint8_t ccValue = 0;
+uint8_t sustainPedal = 0;
+uint8_t knobNumber = 0;
+uint8_t knobValue = 0;
+int midiNoteVoltage = 0;
+int midiNoteFrequency = 0;
 
 // ----------------------------- MIDI note frequencies C1-C7
-float midiNoteFrequency [73] = {
+float noteFrequency [73] = {
   32.7032, 34.6478, 36.7081, 38.8909, 41.2034, 43.6535, 46.2493, 48.9994, 51.9131, 55, 58.2705, 61.7354, 
   65.4064, 69.2957, 73.4162, 77.7817, 82.4069, 87.3071, 92.4986, 97.9989, 103.826, 110, 116.541, 123.471, 
   130.813, 138.591, 146.832, 155.563, 164.814, 174.614, 184.997, 195.998, 207.652, 220, 233.082, 246.942, 
@@ -142,8 +154,8 @@ if (MIDI.read()) {
 
     // -------------------- Note On/Off
     if (MIDI.getType() == midi::NoteOn && MIDI.getChannel() == MIDI_CHANNEL) {
-      uint8_t midiNote = MIDI.getData1();
-      uint8_t velocity = MIDI.getData2();
+      midiNote = MIDI.getData1();
+      velocity = MIDI.getData2();
       if (velocity > 0) {
         noteOn(midiNote, velocity);
 			} 
@@ -152,15 +164,19 @@ if (MIDI.read()) {
 			}
 
       Serial.print("MIDI Note: ");
-      Serial.println(midiNote);
-      Serial.print("Velocity: ");
-      Serial.println(velocity);
+      Serial.print(midiNote);
+      Serial.print("\t Velocity: ");
+      Serial.print(velocity);
+      Serial.print("\t Frequ: ");
+      Serial.print(noteFrequency[midiNote]);
+      Serial.print("\t Volts: ");
+      Serial.println(noteVolt[midiNote]);
       
     }
     
     // ------------------ Pitchbend 
     if (MIDI.getType() == midi::PitchBend && MIDI.getChannel() == MIDI_CHANNEL) {
-      uint16_t pitchBend = MIDI.getData1() | (MIDI.getData2() << 7);
+      pitchBend = MIDI.getData1() | (MIDI.getData2() << 7);
 
       Serial.print("Pitchbender: ");
       Serial.println(pitchBend);
@@ -169,7 +185,7 @@ if (MIDI.read()) {
 
     // ------------------ Aftertouch 
     if (MIDI.getType() == midi::AfterTouchChannel && MIDI.getChannel() == MIDI_CHANNEL) {
-      uint8_t aftertouch = MIDI.getData1();
+      aftertouch = MIDI.getData1();
 
       Serial.print("Aftertouch: ");
       Serial.println(aftertouch);
@@ -178,25 +194,16 @@ if (MIDI.read()) {
 
     // ------------------ Modwheel 
     if (MIDI.getType() == midi::ControlChange && MIDI.getData1() == 1 && MIDI.getChannel() == MIDI_CHANNEL) {
-      uint8_t modulationWheel = MIDI.getData2();
+      modulationWheel = MIDI.getData2();
 
       Serial.print("Modwheel: ");
       Serial.println(modulationWheel);
 
 		}
 
-    // ------------------ MIDI tempo 
-    if (MIDI.getType() == midi::ControlChange && MIDI.getChannel() == MIDI_CHANNEL) {
-      uint8_t ccNumber = MIDI.getData1();
-      uint8_t ccValue = MIDI.getData2();
-      if (ccNumber == CC_TEMPO) {
-        midiTempo = ccValue;
-      }
-		}
-
 		// ------------------ Sustain
     if (MIDI.getType() == midi::ControlChange && MIDI.getData1() == 64 && MIDI.getChannel() == MIDI_CHANNEL) {
-      uint8_t sustainPedal = MIDI.getData2();
+      sustainPedal = MIDI.getData2();
 			if (sustainPedal > 63) {
         susOn = true;
       } else {
@@ -210,13 +217,13 @@ if (MIDI.read()) {
 
     // ------------------ MIDI CC
     if (MIDI.getType() == midi::ControlChange && MIDI.getChannel() == MIDI_CHANNEL) {
-      uint8_t ccNumber = MIDI.getData1();
-      uint8_t ccValue = MIDI.getData2();
-      if (ccNumber != 1) {
+      knobNumber = MIDI.getData1();
+      knobValue = MIDI.getData2();
+      if (knobNumber != 1) {
         Serial.print("MIDI CC: ");
-        Serial.println(ccNumber);
+        Serial.println(knobNumber);
         Serial.print("Value: ");
-        Serial.println(ccValue);
+        Serial.println(knobValue);
       }
     }
 	}
