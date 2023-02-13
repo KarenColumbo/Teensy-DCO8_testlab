@@ -11,6 +11,7 @@
 
 #define NUM_VOICES 8
 #define MIDI_CHANNEL 1
+#define PITCH_BEND_RANGE 2
 #define PITCH_POS 2
 #define PITCH_NEG -2
 #define CC_TEMPO 5
@@ -21,7 +22,7 @@ uint8_t midiController[10];
 bool susOn = false;
 uint8_t midiNote = 0;
 uint8_t velocity = 0;
-uint16_t pitchBend = 0;
+float pitchBend = 8192;
 uint8_t aftertouch = 0;
 uint8_t modulationWheel = 0;
 uint8_t ccNumber = 0;
@@ -30,7 +31,10 @@ uint8_t sustainPedal = 0;
 uint8_t knobNumber = 0;
 uint8_t knobValue = 0;
 int midiNoteVoltage = 0;
-int midiNoteFrequency = 0;
+float midiNoteFrequency = 0;
+float bentNoteFrequency = 0.00;
+
+
 
 // ----------------------------- MIDI note frequencies C1-C7
 float noteFrequency [73] = {
@@ -169,6 +173,12 @@ if (MIDI.read()) {
       Serial.print(velocity);
       Serial.print("\t Frequ: ");
       Serial.print(noteFrequency[midiNote]);
+      Serial.print("\t + Bend: ");
+      float semitone_ratio = pow(2.0, 1.0/12.0);
+      float bend_semitones = (pitchBend - 8192) / 8192.0 * PITCH_BEND_RANGE;
+      float bend_factor = pow(semitone_ratio, bend_semitones);
+      float bentNoteFrequency = noteFrequency[midiNote] * bend_factor;
+      Serial.print(bentNoteFrequency);
       Serial.print("\t Volts: ");
       Serial.println(noteVolt[midiNote]);
       
@@ -178,8 +188,8 @@ if (MIDI.read()) {
     if (MIDI.getType() == midi::PitchBend && MIDI.getChannel() == MIDI_CHANNEL) {
       pitchBend = MIDI.getData1() | (MIDI.getData2() << 7);
 
-      Serial.print("Pitchbender: ");
-      Serial.println(pitchBend);
+      //Serial.print("Pitchbender: ");
+      //Serial.println(pitchBend);
 
     }
 
