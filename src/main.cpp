@@ -71,6 +71,7 @@ const unsigned int noteVolt[73] = {
   uint16_t bentNoteFreq;
   unsigned long lastTime;
   bool clockState;
+  bool sustained;
 };
 
 Voice voices[NUM_VOICES];
@@ -89,6 +90,7 @@ void initializeVoices() {
     voices[i].bentNoteFreq = 0x2000;
     voices[i].lastTime = 0;
     voices[i].clockState = false;
+    voices[i].sustained = false;
   }
 }
 
@@ -115,19 +117,6 @@ int findVoice(uint8_t midiNote) {
   }
   return foundVoice;
 }
-
-/*void noteOn(uint8_t midiNote, uint8_t velocity) {
-  int voice = findVoice(midiNote);
-  if (voice == -1) {
-    voice = findOldestVoice();
-    voices[voice].prevNote = voices[voice].midiNote;
-  }
-  voices[voice].noteAge = millis();
-  voices[voice].midiNote = midiNote;
-  voices[voice].noteOn = true;
-  voices[voice].velocity = velocity;
-}
-*/
 
 void noteOn(uint8_t midiNote, uint8_t velocity) {
   int voice = findVoice(midiNote);
@@ -164,17 +153,38 @@ void noteOn(uint8_t midiNote, uint8_t velocity) {
   voices[voice].midiNote = midiNote;
   voices[voice].noteOn = true;
   voices[voice].velocity = velocity;
+  voices[voice].sustained = susOn;
 }
 
-
+/*
+void noteOff(uint8_t midiNote) {
+  int voice = findVoice(midiNote);
+  if (voice != -1) {
+    if (!susOn) {
+      voices[voice].noteOn = false;
+      voices[voice].velocity = 0;
+      voices[voice].midiNote = 0;
+      voices[voice].noteAge = 0;
+    }
+  }
+} */
 
 void noteOff(uint8_t midiNote) {
   int voice = findVoice(midiNote);
   if (voice != -1) {
-    voices[voice].noteOn = false;
-    voices[voice].velocity = 0;
-    voices[voice].midiNote = 0;
-    voices[voice].noteAge = 0;
+    //if (!voices[voice].sustained) {
+      voices[voice].noteOn = false;
+      voices[voice].velocity = 0;
+      voices[voice].midiNote = 0;
+      voices[voice].noteAge = 0;
+    //}
+  }
+}
+
+void releaseSustainedNotes() {
+  for (int i = 0; i < NUM_VOICES; i++) {
+    voices[i].sustained = false;
+    noteOff(i);
   }
 }
 
@@ -198,31 +208,34 @@ void loop() {
 
 if (MIDI.read()) {
 
-    // -------------------- Note On/Off
-    if (MIDI.getType() == midi::NoteOn && MIDI.getChannel() == MIDI_CHANNEL) {
-      midiNote = MIDI.getData1();
-      velocity = MIDI.getData2();
-      noteOn(midiNote, velocity);
-      for (int i = 0; i < NUM_VOICES; i++) {
-        Serial.print(i);
-        Serial.print(": ");
-        Serial.print(voices[i].midiNote);
-        Serial.print(" | "+String(voices[i].noteAge));
-        Serial.println("   --->    "+String(voices[i].noteOn));
-      }
+  // -------------------- Note On
+  if (MIDI.getType() == midi::NoteOn && MIDI.getChannel() == MIDI_CHANNEL) {
+    midiNote = MIDI.getData1();
+    velocity = MIDI.getData2();
+    noteOn(midiNote, velocity);
+    for (int i = 0; i < NUM_VOICES; i++) {
+      Serial.print(i);
+      Serial.print(": ");
+      Serial.print(voices[i].midiNote);
+      Serial.print(" | "+String(voices[i].noteAge));
+      Serial.println("   --->    "+String(voices[i].noteOn));
     }
+  }
     
-    if (MIDI.getType() == midi::NoteOff && MIDI.getChannel() == MIDI_CHANNEL) {
-      midiNote = MIDI.getData1();
+  // -------------------- Note Off
+  if (MIDI.getType() == midi::NoteOff && MIDI.getChannel() == MIDI_CHANNEL) {
+    midiNote = MIDI.getData1();
+    if (!susOn) { 
       noteOff(midiNote);
-      for (int i = 0; i < NUM_VOICES; i++) {
-        Serial.print(i);
-        Serial.print(": ");
-        Serial.print(voices[i].midiNote);
-        Serial.print(" | "+String(voices[i].noteAge));
-        Serial.println("   --->    "+String(voices[i].noteOn));
-      }
     }
+    for (int i = 0; i < NUM_VOICES; i++) {
+      Serial.print(i);
+      Serial.print(": ");
+      Serial.print(voices[i].midiNote);
+      Serial.print(" | "+String(voices[i].noteAge));
+      Serial.println("   --->    "+String(voices[i].noteOn));
+    }
+  }
 
     //  float semitone_ratio = pow(2.0, 1.0/12.0);
     //  float bend_semitones = (pitchBend - 8192) / 8192.0 * PITCH_BEND_RANGE;
@@ -250,12 +263,14 @@ if (MIDI.read()) {
 		// ------------------ Sustain
     if (MIDI.getType() == midi::ControlChange && MIDI.getData1() == 64 && MIDI.getChannel() == MIDI_CHANNEL) {
       sustainPedal = MIDI.getData2();
+      Serial.println(sustainPedal);
 			if (sustainPedal > 63) {
         susOn = true;
-      } else {
+      } 
+      if (sustainPedal <= 63) {
         susOn = false;
+        releaseSustainedNotes();
       }
-      Serial.print(sustainPedal);
     }
 
     // ------------------ MIDI CC
