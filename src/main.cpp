@@ -19,6 +19,9 @@
 uint16_t benderValue = 0;
 uint8_t midiTempo;
 uint8_t midiController[10];
+const int MAX_SUSTAINED_NOTES = 128;
+int sustainedNotes[MAX_SUSTAINED_NOTES];
+int numSustainedNotes = 0;
 bool susOn = false;
 uint8_t midiNote = 0;
 uint8_t velocity = 0;
@@ -171,30 +174,46 @@ void setup() {
 
 void loop() {
 
-if (MIDI.read()) {
+  if (MIDI.read()) {
 
-  // -------------------- Note On
-  if (MIDI.getType() == midi::NoteOn && MIDI.getChannel() == MIDI_CHANNEL) {
-    midiNote = MIDI.getData1();
-    velocity = MIDI.getData2();
-    noteOn(midiNote, velocity);
-    for (int i = 0; i < NUM_VOICES; i++) {
-      Serial.print(i);
-      Serial.print(": ");
-      Serial.println(voices[i].midiNote);
+    // -------------------- Note On
+    if (MIDI.getType() == midi::NoteOn && MIDI.getChannel() == MIDI_CHANNEL) {
+      uint8_t midiNote = MIDI.getData1();
+      uint8_t velocity = MIDI.getData2();
+      if (velocity > 0) {
+        noteOn(midiNote, velocity);
+        if (susOn) {
+          sustainedNotes[numSustainedNotes] = midiNote;
+          numSustainedNotes++;
+        }
+      } else {
+        noteOff(midiNote);
+        if (susOn) {
+          for (int i = 0; i < numSustainedNotes; i++) {
+            if (sustainedNotes[i] == midiNote) {
+              sustainedNotes[i] = sustainedNotes[numSustainedNotes - 1];
+              numSustainedNotes--;
+              break;
+            }
+          }
+        }
+      }
     }
-  }
     
-  // -------------------- Note Off
-  if (MIDI.getType() == midi::NoteOff && MIDI.getChannel() == MIDI_CHANNEL) {
-    midiNote = MIDI.getData1();
+    // -------------------- Note Off
+    if (MIDI.getType() == midi::NoteOff && MIDI.getChannel() == MIDI_CHANNEL) {
+      uint8_t midiNote = MIDI.getData1();
       noteOff(midiNote);
-    for (int i = 0; i < NUM_VOICES; i++) {
-      Serial.print(i);
-      Serial.print(": ");
-      Serial.println(voices[i].midiNote);
+      if (susOn) {
+        for (int i = 0; i < numSustainedNotes; i++) {
+          if (sustainedNotes[i] == midiNote) {
+            sustainedNotes[i] = sustainedNotes[numSustainedNotes - 1];
+            numSustainedNotes--;
+            break;
+          }
+        }
+      }
     }
-  }
 
     // ------------------ Pitchbend 
     if (MIDI.getType() == midi::PitchBend && MIDI.getChannel() == MIDI_CHANNEL) {
@@ -209,17 +228,23 @@ if (MIDI.read()) {
     // ------------------ Modwheel 
     if (MIDI.getType() == midi::ControlChange && MIDI.getData1() == 1 && MIDI.getChannel() == MIDI_CHANNEL) {
       modulationWheel = MIDI.getData2();
-		}
+	  }
 
-		// ------------------ Sustain
-    if (MIDI.getType() == midi::ControlChange && MIDI.getData1() == 64 && MIDI.getChannel() == MIDI_CHANNEL) {
-      sustainPedal = MIDI.getData2();
-      if (sustainPedal > 63) {
-        susOn = true;
-      } 
-      if (sustainPedal <= 63) {
-        susOn = false;
+	  // -------------------- Sustain On
+    if (MIDI.getType() == midi::ControlChange &&
+        MIDI.getData1() == 64 &&
+        MIDI.getData2() >= 64) {
+      susOn = true;
+    }
+    // -------------------- Sustain Off
+    if (MIDI.getType() == midi::ControlChange &&
+        MIDI.getData1() == 64 &&
+        MIDI.getData2() < 64) {
+      susOn = false;
+      for (int i = 0; i < numSustainedNotes; i++) {
+        noteOff(sustainedNotes[i]);
       }
+      numSustainedNotes = 0;
     }
 
     // ------------------ MIDI CC
@@ -227,14 +252,13 @@ if (MIDI.read()) {
       knobNumber = MIDI.getData1();
       knobValue = MIDI.getData2();
       if (knobNumber >69 && knobNumber <88) {
-      // ...
+        // ...
       }
     }
-	}
 
 	  //  float semitone_ratio = pow(2.0, 1.0/12.0);
     //  float bend_semitones = (pitchBend - 8192) / 8192.0 * PITCH_BEND_RANGE;
     //  float bend_factor = pow(semitone_ratio, bend_semitones);
     //  float bentNoteFrequency = noteFrequency[midiNote] * bend_factor;     
-	
+  }
 }
