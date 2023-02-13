@@ -59,20 +59,16 @@ const unsigned int noteVolt[73] = {
   };
 
   struct Voice {
-  unsigned long noteAge;
-  uint8_t midiNote;
-  bool noteOn;
-  uint8_t velocity;
-  uint16_t pitchBend;
-  uint8_t channelPressure;
-  uint8_t modulationWheel;
-  uint8_t prevNote;
-  uint16_t bentNote;
-  uint16_t bentNoteFreq;
-  unsigned long lastTime;
-  bool clockState;
-  bool sustained;
-};
+    unsigned long noteAge;
+    uint8_t midiNote;
+    bool noteOn;
+    bool sustained;
+    uint8_t velocity;
+    uint16_t pitchBend;
+    uint8_t channelPressure;
+    uint8_t modulationWheel;
+    uint8_t prevNote;
+  };
 
 Voice voices[NUM_VOICES];
 
@@ -81,16 +77,11 @@ void initializeVoices() {
     voices[i].noteAge = 0;
     voices[i].midiNote = 0;
     voices[i].noteOn = false;
+    voices[i].sustained = false;
     voices[i].velocity = 0;
     voices[i].pitchBend = 0x2000;
     voices[i].channelPressure = 0;
     voices[i].modulationWheel = 0;
-    voices[i].prevNote = 0;
-    voices[i].bentNote = 0x2000;
-    voices[i].bentNoteFreq = 0x2000;
-    voices[i].lastTime = 0;
-    voices[i].clockState = false;
-    voices[i].sustained = false;
   }
 }
 
@@ -127,7 +118,6 @@ void noteOn(uint8_t midiNote, uint8_t velocity) {
         numPlayingVoices++;
       }
     }
-
     if (numPlayingVoices >= NUM_VOICES) {
       unsigned long oldestAge = 0xFFFFFFFF;
       int oldestVoice = -1;
@@ -146,45 +136,24 @@ void noteOn(uint8_t midiNote, uint8_t velocity) {
         }
       }
     }
-
     voices[voice].prevNote = voices[voice].midiNote;
   }
   voices[voice].noteAge = millis();
   voices[voice].midiNote = midiNote;
   voices[voice].noteOn = true;
   voices[voice].velocity = velocity;
-  voices[voice].sustained = susOn;
 }
 
-/*
 void noteOff(uint8_t midiNote) {
   int voice = findVoice(midiNote);
   if (voice != -1) {
-    if (!susOn) {
+    //if (voices[voice].sustained == false) {
       voices[voice].noteOn = false;
       voices[voice].velocity = 0;
       voices[voice].midiNote = 0;
       voices[voice].noteAge = 0;
-    }
-  }
-} */
-
-void noteOff(uint8_t midiNote) {
-  int voice = findVoice(midiNote);
-  if (voice != -1) {
-    //if (!voices[voice].sustained) {
-      voices[voice].noteOn = false;
-      voices[voice].velocity = 0;
-      voices[voice].midiNote = 0;
-      voices[voice].noteAge = 0;
+      
     //}
-  }
-}
-
-void releaseSustainedNotes() {
-  for (int i = 0; i < NUM_VOICES; i++) {
-    voices[i].sustained = false;
-    noteOff(i);
   }
 }
 
@@ -216,35 +185,22 @@ if (MIDI.read()) {
     for (int i = 0; i < NUM_VOICES; i++) {
       Serial.print(i);
       Serial.print(": ");
-      Serial.print(voices[i].midiNote);
-      Serial.print(" | "+String(voices[i].noteAge));
-      Serial.println("   --->    "+String(voices[i].noteOn));
+      Serial.println(voices[i].midiNote);
     }
   }
     
   // -------------------- Note Off
   if (MIDI.getType() == midi::NoteOff && MIDI.getChannel() == MIDI_CHANNEL) {
     midiNote = MIDI.getData1();
-    if (!susOn) { 
       noteOff(midiNote);
-    }
+    
     for (int i = 0; i < NUM_VOICES; i++) {
       Serial.print(i);
       Serial.print(": ");
-      Serial.print(voices[i].midiNote);
-      Serial.print(" | "+String(voices[i].noteAge));
-      Serial.println("   --->    "+String(voices[i].noteOn));
+      Serial.println(voices[i].midiNote);
     }
   }
 
-    //  float semitone_ratio = pow(2.0, 1.0/12.0);
-    //  float bend_semitones = (pitchBend - 8192) / 8192.0 * PITCH_BEND_RANGE;
-    //  float bend_factor = pow(semitone_ratio, bend_semitones);
-    //  float bentNoteFrequency = noteFrequency[midiNote] * bend_factor;     
-
-      
-    
-    
     // ------------------ Pitchbend 
     if (MIDI.getType() == midi::PitchBend && MIDI.getChannel() == MIDI_CHANNEL) {
       pitchBend = MIDI.getData1() | (MIDI.getData2() << 7);
@@ -263,13 +219,11 @@ if (MIDI.read()) {
 		// ------------------ Sustain
     if (MIDI.getType() == midi::ControlChange && MIDI.getData1() == 64 && MIDI.getChannel() == MIDI_CHANNEL) {
       sustainPedal = MIDI.getData2();
-      Serial.println(sustainPedal);
-			if (sustainPedal > 63) {
+      if (sustainPedal > 63) {
         susOn = true;
       } 
       if (sustainPedal <= 63) {
         susOn = false;
-        releaseSustainedNotes();
       }
     }
 
@@ -278,14 +232,14 @@ if (MIDI.read()) {
       knobNumber = MIDI.getData1();
       knobValue = MIDI.getData2();
       if (knobNumber >69 && knobNumber <88) {
-        
+      // ...
       }
     }
 	}
 
-	// ****************************************************************
-	// ***************************** DEBUG ****************************
-	// ****************************************************************
-	
+	  //  float semitone_ratio = pow(2.0, 1.0/12.0);
+    //  float bend_semitones = (pitchBend - 8192) / 8192.0 * PITCH_BEND_RANGE;
+    //  float bend_factor = pow(semitone_ratio, bend_semitones);
+    //  float bentNoteFrequency = noteFrequency[midiNote] * bend_factor;     
 	
 }
