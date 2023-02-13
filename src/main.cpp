@@ -120,7 +120,7 @@ void noteOff(uint8_t midiNote) {
   }
 }
 
-MIDI_CREATE_DEFAULT_INSTANCE();
+MIDI_CREATE_INSTANCE(HardwareSerial, Serial1,  MIDI);
 
 // ************************************************
 // ******************** SETUP *********************
@@ -150,6 +150,12 @@ if (MIDI.read()) {
       if (velocity == 0 && susOn == false) {
         noteOff(midiNote);
 			}
+
+      Serial.print("MIDI Note: ");
+      Serial.println(midiNote);
+      Serial.print("Velocity: ");
+      Serial.println(velocity);
+      
     }
     
     // ------------------ Pitchbend 
@@ -191,16 +197,5 @@ if (MIDI.read()) {
 	// ***************************** DEBUG ****************************
 	// ****************************************************************
 	
-	for (int i = 0; i < NUM_VOICES; i++) {
-		//Serial.println("Note Age: "+voices[i].noteAge);
-    Serial.println("MIDI Note: "+voices[i].midiNote);
-    Serial.println("On/Off: "+voices[i].noteOn);
-    //Serial.println("Velo: "+voices[i].velocity);
-    //Serial.println("Bend: "+voices[i].pitchBend);
-    //Serial.println("Touch: "+voices[i].channelPressure);
-    //Serial.println("Wheel: "+voices[i].modulationWheel);
-    //Serial.println("Prev Note: "+voices[i].prevNote);
-    //Serial.println("Final Note: "+voices[i].bentNote);
-    //Serial.println("Note Freq: "+voices[i].bentNoteFreq);
-	}  
+	
 }
