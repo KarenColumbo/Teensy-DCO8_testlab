@@ -116,7 +116,7 @@ int findVoice(uint8_t midiNote) {
   return foundVoice;
 }
 
-void noteOn(uint8_t midiNote, uint8_t velocity) {
+/*void noteOn(uint8_t midiNote, uint8_t velocity) {
   int voice = findVoice(midiNote);
   if (voice == -1) {
     voice = findOldestVoice();
@@ -127,12 +127,54 @@ void noteOn(uint8_t midiNote, uint8_t velocity) {
   voices[voice].noteOn = true;
   voices[voice].velocity = velocity;
 }
+*/
+
+void noteOn(uint8_t midiNote, uint8_t velocity) {
+  int voice = findVoice(midiNote);
+  if (voice == -1) {
+    int numPlayingVoices = 0;
+    for (int i = 0; i < NUM_VOICES; i++) {
+      if (voices[i].noteOn) {
+        numPlayingVoices++;
+      }
+    }
+
+    if (numPlayingVoices >= NUM_VOICES) {
+      unsigned long oldestAge = 0xFFFFFFFF;
+      int oldestVoice = -1;
+      for (int i = 0; i < NUM_VOICES; i++) {
+        if (voices[i].noteAge < oldestAge) {
+          oldestAge = voices[i].noteAge;
+          oldestVoice = i;
+        }
+      }
+      voice = oldestVoice;
+    } else {
+      for (int i = 0; i < NUM_VOICES; i++) {
+        if (!voices[i].noteOn) {
+          voice = i;
+          break;
+        }
+      }
+    }
+
+    voices[voice].prevNote = voices[voice].midiNote;
+  }
+  voices[voice].noteAge = millis();
+  voices[voice].midiNote = midiNote;
+  voices[voice].noteOn = true;
+  voices[voice].velocity = velocity;
+}
+
+
 
 void noteOff(uint8_t midiNote) {
   int voice = findVoice(midiNote);
   if (voice != -1) {
     voices[voice].noteOn = false;
     voices[voice].velocity = 0;
+    voices[voice].midiNote = 0;
+    voices[voice].noteAge = 0;
   }
 }
 
@@ -160,55 +202,49 @@ if (MIDI.read()) {
     if (MIDI.getType() == midi::NoteOn && MIDI.getChannel() == MIDI_CHANNEL) {
       midiNote = MIDI.getData1();
       velocity = MIDI.getData2();
-      if (velocity > 0) {
-        noteOn(midiNote, velocity);
-			} 
-      if (velocity == 0 && susOn == false) {
-        noteOff(midiNote);
-			}
-
-      Serial.print("MIDI Note: ");
-      Serial.print(midiNote);
-      Serial.print("\t Velocity: ");
-      Serial.print(velocity);
-      Serial.print("\t Frequ: ");
-      Serial.print(noteFrequency[midiNote]);
-      Serial.print("\t + Bend: ");
-      float semitone_ratio = pow(2.0, 1.0/12.0);
-      float bend_semitones = (pitchBend - 8192) / 8192.0 * PITCH_BEND_RANGE;
-      float bend_factor = pow(semitone_ratio, bend_semitones);
-      float bentNoteFrequency = noteFrequency[midiNote] * bend_factor;
-      Serial.print(bentNoteFrequency);
-      Serial.print("\t Volts: ");
-      Serial.println(noteVolt[midiNote]);
-      
+      noteOn(midiNote, velocity);
+      for (int i = 0; i < NUM_VOICES; i++) {
+        Serial.print(i);
+        Serial.print(": ");
+        Serial.print(voices[i].midiNote);
+        Serial.print(" | "+String(voices[i].noteAge));
+        Serial.println("   --->    "+String(voices[i].noteOn));
+      }
     }
+    
+    if (MIDI.getType() == midi::NoteOff && MIDI.getChannel() == MIDI_CHANNEL) {
+      midiNote = MIDI.getData1();
+      noteOff(midiNote);
+      for (int i = 0; i < NUM_VOICES; i++) {
+        Serial.print(i);
+        Serial.print(": ");
+        Serial.print(voices[i].midiNote);
+        Serial.print(" | "+String(voices[i].noteAge));
+        Serial.println("   --->    "+String(voices[i].noteOn));
+      }
+    }
+
+    //  float semitone_ratio = pow(2.0, 1.0/12.0);
+    //  float bend_semitones = (pitchBend - 8192) / 8192.0 * PITCH_BEND_RANGE;
+    //  float bend_factor = pow(semitone_ratio, bend_semitones);
+    //  float bentNoteFrequency = noteFrequency[midiNote] * bend_factor;     
+
+      
+    
     
     // ------------------ Pitchbend 
     if (MIDI.getType() == midi::PitchBend && MIDI.getChannel() == MIDI_CHANNEL) {
       pitchBend = MIDI.getData1() | (MIDI.getData2() << 7);
-
-      //Serial.print("Pitchbender: ");
-      //Serial.println(pitchBend);
-
     }
 
     // ------------------ Aftertouch 
     if (MIDI.getType() == midi::AfterTouchChannel && MIDI.getChannel() == MIDI_CHANNEL) {
       aftertouch = MIDI.getData1();
-
-      Serial.print("Aftertouch: ");
-      Serial.println(aftertouch);
-
     }
 
     // ------------------ Modwheel 
     if (MIDI.getType() == midi::ControlChange && MIDI.getData1() == 1 && MIDI.getChannel() == MIDI_CHANNEL) {
       modulationWheel = MIDI.getData2();
-
-      Serial.print("Modwheel: ");
-      Serial.println(modulationWheel);
-
 		}
 
 		// ------------------ Sustain
@@ -219,21 +255,15 @@ if (MIDI.read()) {
       } else {
         susOn = false;
       }
-
-      Serial.print("Sustain: ");
-      Serial.println(sustainPedal);
-
+      Serial.print(sustainPedal);
     }
 
     // ------------------ MIDI CC
     if (MIDI.getType() == midi::ControlChange && MIDI.getChannel() == MIDI_CHANNEL) {
       knobNumber = MIDI.getData1();
       knobValue = MIDI.getData2();
-      if (knobNumber != 1) {
-        Serial.print("MIDI CC: ");
-        Serial.println(knobNumber);
-        Serial.print("Value: ");
-        Serial.println(knobValue);
+      if (knobNumber >69 && knobNumber <88) {
+        
       }
     }
 	}
