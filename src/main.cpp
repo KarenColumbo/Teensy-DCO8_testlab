@@ -207,6 +207,18 @@ if (MIDI.read()) {
       Serial.println(sustainPedal);
 
     }
+
+    // ------------------ MIDI CC
+    if (MIDI.getType() == midi::ControlChange && MIDI.getChannel() == MIDI_CHANNEL) {
+      uint8_t ccNumber = MIDI.getData1();
+      uint8_t ccValue = MIDI.getData2();
+      if (ccNumber != 1) {
+        Serial.print("MIDI CC: ");
+        Serial.println(ccNumber);
+        Serial.print("Value: ");
+        Serial.println(ccValue);
+      }
+    }
 	}
 
 	// ****************************************************************
