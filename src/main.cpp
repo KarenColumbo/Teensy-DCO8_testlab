@@ -161,16 +161,28 @@ if (MIDI.read()) {
     // ------------------ Pitchbend 
     if (MIDI.getType() == midi::PitchBend && MIDI.getChannel() == MIDI_CHANNEL) {
       uint16_t pitchBend = MIDI.getData1() | (MIDI.getData2() << 7);
+
+      Serial.print("Pitchbender: ");
+      Serial.println(pitchBend);
+
     }
 
     // ------------------ Aftertouch 
     if (MIDI.getType() == midi::AfterTouchChannel && MIDI.getChannel() == MIDI_CHANNEL) {
       uint8_t aftertouch = MIDI.getData1();
+
+      Serial.print("Aftertouch: ");
+      Serial.println(aftertouch);
+
     }
 
     // ------------------ Modwheel 
     if (MIDI.getType() == midi::ControlChange && MIDI.getData1() == 1 && MIDI.getChannel() == MIDI_CHANNEL) {
-      uint8_t modulationWheel = MIDI.getData1() | (MIDI.getData2() << 7);
+      uint8_t modulationWheel = MIDI.getData2();
+
+      Serial.print("Modwheel: ");
+      Serial.println(modulationWheel);
+
 		}
 
     // ------------------ MIDI tempo 
@@ -190,6 +202,10 @@ if (MIDI.read()) {
       } else {
         susOn = false;
       }
+
+      Serial.print("Sustain: ");
+      Serial.println(sustainPedal);
+
     }
 	}
 
