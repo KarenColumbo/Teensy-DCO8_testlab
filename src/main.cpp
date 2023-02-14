@@ -63,6 +63,7 @@ const unsigned int noteVolt[73] = {
     uint8_t midiNote;
     bool noteOn;
     bool sustained;
+    bool keyDown;
     uint8_t velocity;
     uint16_t pitchBend;
     uint8_t channelPressure;
@@ -78,6 +79,7 @@ void initializeVoices() {
     voices[i].midiNote = 0;
     voices[i].noteOn = false;
     voices[i].sustained = false;
+    voices[i].keyDown = false;
     voices[i].velocity = 0;
     voices[i].pitchBend = 0x2000;
     voices[i].channelPressure = 0;
@@ -88,11 +90,13 @@ void initializeVoices() {
 // ------------------------ Debug Print
 void debugPrint(int voice) {
   Serial.print("Voice #" + String(voice));
-  Serial.print(": ");
+  Serial.print("  Key: ");
   Serial.print(voices[voice].midiNote);
-  Serial.print(" (");
+  Serial.print("\tkeyDown: ");
+  Serial.print(voices[voice].keyDown);
+  Serial.print("\tOn: ");
   Serial.print(voices[voice].noteOn);
-  Serial.print(") -> sustained: ");
+  Serial.print("\t -> Sustained: ");
   Serial.println(voices[voice].sustained);
 }
 
@@ -152,18 +156,19 @@ void noteOn(uint8_t midiNote, uint8_t velocity) {
   voices[voice].noteAge = millis();
   voices[voice].midiNote = midiNote;
   voices[voice].noteOn = true;
+  voices[voice].keyDown = true;
   voices[voice].velocity = velocity;
-  if (susOn == true) {voices[voice].sustained = true;}
 }
 
 void noteOff(uint8_t midiNote) {
   int voice = findVoice(midiNote);
   if (voice != -1) {
+    voices[voice].keyDown = false;
     if (susOn == false) {
     //if (voices[voice].sustained == false) {
       
         voices[voice].noteOn = false;
-        voices[voice].velocity = 0;
+         voices[voice].velocity = 0;
         voices[voice].midiNote = 0;
         voices[voice].noteAge = 0;
       
@@ -177,9 +182,12 @@ void unsustainNotes() {
   for (int i = 0; i < NUM_VOICES; i++) {
     //if (voices[i].noteOn == false) {
       voices[i].sustained = false;
-      //if (voices[i].noteOn == false) {
-        noteOff(voices[i].midiNote);
-      //}
+      if (voices[i].keyDown == false) {
+        voices[i].noteOn = false;
+         voices[i].velocity = 0;
+        voices[i].midiNote = 0;
+        voices[i].noteAge = 0;
+      }
     //}
     
       debugPrint(i);
