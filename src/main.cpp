@@ -11,11 +11,9 @@
 
 #define NUM_VOICES 8
 #define MIDI_CHANNEL 1
-#define PITCH_BEND_RANGE 2
-#define PITCH_POS 2
-#define PITCH_NEG -2
 #define CC_TEMPO 5
 #define A4 440
+const int PITCH_BEND_RANGE = 2;
 uint16_t benderValue = 0;
 uint8_t midiTempo;
 uint8_t midiController[10];
@@ -23,6 +21,7 @@ bool susOn = false;
 uint8_t midiNote = 0;
 uint8_t velocity = 0;
 float pitchBend = 8192;
+int pitchBendVolts = 8192;
 uint8_t aftertouch = 0;
 uint8_t modulationWheel = 0;
 uint8_t ccNumber = 0;
@@ -65,10 +64,9 @@ const unsigned int noteVolt[73] = {
     bool sustained;
     bool keyDown;
     uint8_t velocity;
-    uint16_t pitchBend;
-    uint8_t channelPressure;
-    uint8_t modulationWheel;
     uint8_t prevNote;
+    uint16_t bentNote;
+    uint16_t bentNoteFreq;
   };
 
 Voice voices[NUM_VOICES];
@@ -81,17 +79,26 @@ void initializeVoices() {
     voices[i].sustained = false;
     voices[i].keyDown = false;
     voices[i].velocity = 0;
-    voices[i].pitchBend = 0x2000;
-    voices[i].channelPressure = 0;
-    voices[i].modulationWheel = 0;
-  }
+    voices[i].prevNote = 0;
+    voices[i].bentNote = 0;
+    voices[i].bentNoteFreq = 0;
+    }
 }
+
+double pitchBendNoteVoltage(double noteVolt, int midiNote, int pitchBender, double PITCH_BEND_RANGE) {
+    return noteVolt * pow(2, (pitchBender - 8192) / 8192.0 * PITCH_BEND_RANGE / 12.0);
+}
+
 
 // ------------------------ Debug Print
 void debugPrint(int voice) {
   Serial.print("Voice #" + String(voice));
   Serial.print("  Key: ");
   Serial.print(voices[voice].midiNote);
+  Serial.print("\tFreq: ");
+  Serial.print(noteFrequency[voices[voice].midiNote]);
+  Serial.print("\tBent: ");
+  Serial.print(voices[voice].bentNoteFreq);
   Serial.print("\tkeyDown: ");
   Serial.print(voices[voice].keyDown);
   Serial.print("\tOn: ");
@@ -186,7 +193,7 @@ void unsustainNotes() {
       }
     //}
     
-      debugPrint(i);
+      
     
   }
 }
@@ -196,7 +203,7 @@ void sustainNotes() {
     if (voices[i].noteOn == true) {
       voices[i].sustained = true;
     }
-    debugPrint(i);
+    
   }
 }
 
@@ -226,7 +233,7 @@ void loop() {
       velocity = MIDI.getData2();
       noteOn(midiNote, velocity);
       for (int i = 0; i < NUM_VOICES; i++) {
-        debugPrint(i);
+        
       }
     }
     
@@ -235,14 +242,15 @@ void loop() {
       midiNote = MIDI.getData1();
         noteOff(midiNote);
       for (int i = 0; i < NUM_VOICES; i++) {
-        debugPrint(i);
+        
       }
     }
 
     // ------------------ Pitchbend 
     if (MIDI.getType() == midi::PitchBend && MIDI.getChannel() == MIDI_CHANNEL) {
-      pitchBend = (MIDI.getData2() << 7) | MIDI.getData1(); // already 14 bits = Volts out
-      Serial.println("Bender: " + String(pitchBend));
+      pitchBendVolts = MIDI.getData2() << 7 | MIDI.getData1(); // already 14 bits = Volts out
+      pitchBend = map((MIDI.getData2() << 7 | MIDI.getData1()), 0, 16383, PITCH_BEND_RANGE, 0 - PITCH_BEND_RANGE);
+      
     }
 
     // ------------------ Aftertouch 
@@ -278,9 +286,27 @@ void loop() {
     }
   }
 
-	  //  float semitone_ratio = pow(2.0, 1.0/12.0);
-    //  float bend_semitones = (pitchBend - 8192) / 8192.0 * PITCH_BEND_RANGE;
-    //  float bend_factor = pow(semitone_ratio, bend_semitones);
-    //  float bentNoteFrequency = noteFrequency[midiNote] * bend_factor;     
+  // ****************************************************************
+  // *************************** OUTPUT *****************************
+  // ****************************************************************
+
+  for (int i = 0; i < NUM_VOICES; i++) {
+      // Calculate pitchbender factor
+      int midiNoteVoltage = noteVolt[voices[i].midiNote];
+      double semitones = (double)benderValue / (double)16383 * 2.0;
+      double factor = pow(2.0, semitones / 12.0);
+      voices[i].bentNote = midiNoteVoltage * factor;
+      voices[i].bentNoteFreq = noteFrequency[i] * factor;
+      if (voices[i].bentNote < 0) {
+        voices[i].bentNote = 0;
+      }
+      if (voices[i].bentNote > 16383) {
+        voices[i].bentNote = 16383;
+      }
+      
+    }
+  
+
 	
 }
+
