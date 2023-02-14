@@ -148,11 +148,14 @@ void noteOn(uint8_t midiNote, uint8_t velocity) {
 void noteOff(uint8_t midiNote) {
   int voice = findVoice(midiNote);
   if (voice != -1) {
-    if (voices[voice].sustained == false) {
-      voices[voice].noteOn = false;
-      voices[voice].velocity = 0;
-      voices[voice].midiNote = 0;
-      voices[voice].noteAge = 0;
+    if (susOn == false) {
+    //if (voices[voice].sustained == false) {
+      
+        voices[voice].noteOn = false;
+        voices[voice].velocity = 0;
+        voices[voice].midiNote = 0;
+        voices[voice].noteAge = 0;
+      
     }
     
   }

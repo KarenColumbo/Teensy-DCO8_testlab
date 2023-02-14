@@ -85,6 +85,17 @@ void initializeVoices() {
   }
 }
 
+// ------------------------ Debug Print
+void debugPrint(int voice) {
+  Serial.print("Voice #" + String(voice));
+  Serial.print(": ");
+  Serial.print(voices[voice].midiNote);
+  Serial.print(" (");
+  Serial.print(voices[voice].noteOn);
+  Serial.print(") -> sustained: ");
+  Serial.println(voices[voice].sustained);
+}
+
 // ------------------------ Voice buffer subroutines 
 int findOldestVoice() {
   int oldestVoice = 0;
@@ -148,49 +159,30 @@ void noteOn(uint8_t midiNote, uint8_t velocity) {
 void noteOff(uint8_t midiNote) {
   int voice = findVoice(midiNote);
   if (voice != -1) {
+    if (susOn == false) {
     //if (voices[voice].sustained == false) {
-      voices[voice].noteOn = false;
-      voices[voice].velocity = 0;
-      voices[voice].midiNote = 0;
-      voices[voice].noteAge = 0;
-    //}
+      
+        voices[voice].noteOn = false;
+        voices[voice].velocity = 0;
+        voices[voice].midiNote = 0;
+        voices[voice].noteAge = 0;
+      
+    }
     
   }
 }
 
 // Sustain management
-void checkSustain() {
-  for (int i = 0; i < NUM_VOICES; i++) {
-    if (voices[i].noteOn == true && voices[i].sustained == false && susOn == false) {
-      noteOff(voices[i].midiNote);
-    }
-    else if (voices[i].noteOn == false && voices[i].sustained == true && susOn == false) {
-      voices[i].noteOn = false;
-      voices[i].velocity = 0;
-      voices[i].midiNote = 0;
-      voices[i].noteAge = 0;
-      voices[i].sustained = false;
-    }
-  }
-}
-
 void unsustainNotes() {
   for (int i = 0; i < NUM_VOICES; i++) {
-    if (voices[i].noteOn == true) {
+    //if (voices[i].noteOn == false) {
       voices[i].sustained = false;
-      voices[i].noteOn = true;
-    }
-    if (voices[i].noteOn == false) {
-      voices[i].sustained = false;
-      noteOff(voices[i].midiNote);
-    }
+      //if (voices[i].noteOn == false) {
+        noteOff(voices[i].midiNote);
+      //}
     //}
     
-      Serial.print("Voice #" + String(i));
-      Serial.print(": ");
-      Serial.print(voices[i].midiNote);
-      Serial.print(" -> Sustain ");
-      Serial.println(voices[i].sustained);
+      debugPrint(i);
     
   }
 }
@@ -200,8 +192,10 @@ void sustainNotes() {
     if (voices[i].noteOn == true) {
       voices[i].sustained = true;
     }
+    debugPrint(i);
   }
 }
+
 
 MIDI_CREATE_INSTANCE(HardwareSerial, Serial1,  MIDI);
 
@@ -228,15 +222,8 @@ if (MIDI.read()) {
     velocity = MIDI.getData2();
     noteOn(midiNote, velocity);
     for (int i = 0; i < NUM_VOICES; i++) {
-      Serial.print("Voice #" + String(i));
-      Serial.print(": ");
-      Serial.print(voices[i].midiNote);
-      Serial.print(" (");
-      Serial.print(voices[i].noteOn);
-      Serial.print(") -> Sustain ");
-      Serial.println(voices[i].sustained);
+       debugPrint(i);
     }
-    
   }
     
   // -------------------- Note Off
@@ -244,15 +231,8 @@ if (MIDI.read()) {
     midiNote = MIDI.getData1();
       noteOff(midiNote);
     for (int i = 0; i < NUM_VOICES; i++) {
-      Serial.print("Voice #" + String(i));
-      Serial.print(": ");
-      Serial.print(voices[i].midiNote);
-      Serial.print(" (");
-      Serial.print(voices[i].noteOn);
-      Serial.print(") -> Sustain ");
-      Serial.println(voices[i].sustained);
+      debugPrint(i);
     }
-    
   }
 
     // ------------------ Pitchbend 
@@ -276,12 +256,10 @@ if (MIDI.read()) {
       if (sustainPedal > 63) {
         susOn = true;
         sustainNotes();
-        //Serial.println("Sustain On");
       } 
       if (sustainPedal <= 63) {
         susOn = false;
         unsustainNotes();
-        //Serial.println("Sustain Off");
       }
     }
 
