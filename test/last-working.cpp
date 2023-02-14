@@ -148,42 +148,24 @@ void noteOn(uint8_t midiNote, uint8_t velocity) {
 void noteOff(uint8_t midiNote) {
   int voice = findVoice(midiNote);
   if (voice != -1) {
-    //if (voices[voice].sustained == false) {
+    if (voices[voice].sustained == false) {
       voices[voice].noteOn = false;
       voices[voice].velocity = 0;
       voices[voice].midiNote = 0;
       voices[voice].noteAge = 0;
-    //}
+    }
     
   }
 }
 
 // Sustain management
-void checkSustain() {
-  for (int i = 0; i < NUM_VOICES; i++) {
-    if (voices[i].noteOn == true && voices[i].sustained == false && susOn == false) {
-      noteOff(voices[i].midiNote);
-    }
-    else if (voices[i].noteOn == false && voices[i].sustained == true && susOn == false) {
-      voices[i].noteOn = false;
-      voices[i].velocity = 0;
-      voices[i].midiNote = 0;
-      voices[i].noteAge = 0;
-      voices[i].sustained = false;
-    }
-  }
-}
-
 void unsustainNotes() {
   for (int i = 0; i < NUM_VOICES; i++) {
-    if (voices[i].noteOn == true) {
+    //if (voices[i].noteOn == false) {
       voices[i].sustained = false;
-      voices[i].noteOn = true;
-    }
-    if (voices[i].noteOn == false) {
-      voices[i].sustained = false;
-      noteOff(voices[i].midiNote);
-    }
+      //if (voices[i].noteOn == false) {
+        noteOff(voices[i].midiNote);
+      //}
     //}
     
       Serial.print("Voice #" + String(i));
@@ -202,6 +184,7 @@ void sustainNotes() {
     }
   }
 }
+
 
 MIDI_CREATE_INSTANCE(HardwareSerial, Serial1,  MIDI);
 
@@ -236,7 +219,6 @@ if (MIDI.read()) {
       Serial.print(") -> Sustain ");
       Serial.println(voices[i].sustained);
     }
-    
   }
     
   // -------------------- Note Off
@@ -252,7 +234,6 @@ if (MIDI.read()) {
       Serial.print(") -> Sustain ");
       Serial.println(voices[i].sustained);
     }
-    
   }
 
     // ------------------ Pitchbend 
@@ -276,12 +257,10 @@ if (MIDI.read()) {
       if (sustainPedal > 63) {
         susOn = true;
         sustainNotes();
-        //Serial.println("Sustain On");
       } 
       if (sustainPedal <= 63) {
         susOn = false;
         unsustainNotes();
-        //Serial.println("Sustain Off");
       }
     }
 
