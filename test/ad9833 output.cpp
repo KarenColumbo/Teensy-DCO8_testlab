@@ -135,32 +135,6 @@ void setAD9833TriangleWave(float frequency) {
   SPI.endTransaction();
 }
 
-/*// Function to set the AD9833 frequency to a given value (in Hz)
-void setAD9833Frequency(float frequency) {
-  // Calculate the frequency tuning word (28 bits)
-  uint32_t freqWord = (uint32_t)(frequency * pow(2.0, 28.0) / 1000000.0);
-  
-  // Split the frequency tuning word into two 14-bit values
-  uint16_t freqWordUpper = (freqWord >> 14) & 0x3FFF;
-  uint16_t freqWordLower = freqWord & 0x3FFF;
-
-  // Send the frequency tuning word to the AD9833
-  SPI.beginTransaction(AD9833_SPISettings);
-
-  // Reset the AD9833
-  SPI.transfer16(AD9833_CMD_RESET);
-  delayMicroseconds(10);
-
-  // Write the frequency tuning word to the AD9833
-  SPI.transfer16(AD9833_CMD_WR | AD9833_CMD_FSEL0 | freqWordLower);
-  SPI.transfer16(AD9833_CMD_WR | AD9833_CMD_FSEL1 | freqWordUpper);
-
-  // Enable the output (set phase to 0 degrees)
-  SPI.transfer16(AD9833_CMD_WR | AD9833_CMD_PSEL0 | 0x0000);
-
-  SPI.endTransaction();
-} */
-
 void applyLFO(float &freq) {
   // Read the voltage on the LFO input pin and map it to the range of LFO depth
   float lfoVolts = (float)analogRead(LFO_PIN) / 4095.0 * (LFO_MAX_VOLTS - LFO_MIN_VOLTS) + LFO_MIN_VOLTS;
