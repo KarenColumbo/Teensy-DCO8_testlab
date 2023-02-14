@@ -1,3 +1,5 @@
+//Rewrite for use og 8 AD9833s instead of one. Maybe use 23S17 or TCA9548?
+
 #include <stdint.h>
 #include <Arduino.h>
 #include <MIDI.h>
