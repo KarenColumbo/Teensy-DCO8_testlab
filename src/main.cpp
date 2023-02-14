@@ -11,8 +11,7 @@
 
 #define NUM_VOICES 8
 #define MIDI_CHANNEL 1
-#define CC_TEMPO 5
-#define A4 440
+const int DETUNE = 0;
 const int PITCH_BEND_RANGE = 2;
 uint16_t benderValue = 0;
 uint8_t midiTempo;
@@ -30,10 +29,6 @@ uint8_t sustainPedal = 0;
 uint8_t knobNumber = 0;
 uint8_t knobValue = 0;
 int midiNoteVoltage = 0;
-float midiNoteFrequency = 0;
-float bentNoteFrequency = 0.00;
-
-
 
 // ----------------------------- MIDI note frequencies C1-C7
 float noteFrequency [73] = {
@@ -291,22 +286,18 @@ void loop() {
   // ****************************************************************
 
   for (int i = 0; i < NUM_VOICES; i++) {
-      // Calculate pitchbender factor
-      int midiNoteVoltage = noteVolt[voices[i].midiNote];
-      double semitones = (double)benderValue / (double)16383 * 2.0;
-      double factor = pow(2.0, semitones / 12.0);
-      voices[i].bentNote = midiNoteVoltage * factor;
-      voices[i].bentNoteFreq = noteFrequency[i] * factor;
-      if (voices[i].bentNote < 0) {
-        voices[i].bentNote = 0;
-      }
-      if (voices[i].bentNote > 16383) {
-        voices[i].bentNote = 16383;
-      }
-      
+    // Calculate pitchbender factor
+    midiNoteVoltage = noteVolt[voices[i].midiNote];
+    double semitones = (double)benderValue / (double)16383 * 2.0;
+    double factor = pow(2.0, semitones / 12.0);
+    voices[i].bentNote = midiNoteVoltage * factor;
+    voices[i].bentNoteFreq = noteFrequency[i] * factor;
+    if (voices[i].bentNote < 0) {
+      voices[i].bentNote = 0;
     }
-  
-
-	
+    if (voices[i].bentNote > 16383) {
+      voices[i].bentNote = 16383;
+    }
+  }	
 }
 
