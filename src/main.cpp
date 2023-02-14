@@ -165,15 +165,11 @@ void noteOff(uint8_t midiNote) {
   if (voice != -1) {
     voices[voice].keyDown = false;
     if (susOn == false) {
-    //if (voices[voice].sustained == false) {
-      
-        voices[voice].noteOn = false;
-         voices[voice].velocity = 0;
-        voices[voice].midiNote = 0;
-        voices[voice].noteAge = 0;
-      
+      voices[voice].noteOn = false;
+      voices[voice].velocity = 0;
+      voices[voice].midiNote = 0;
+      voices[voice].noteAge = 0;
     }
-    
   }
 }
 
@@ -222,30 +218,31 @@ void setup() {
 
 void loop() {
 
-if (MIDI.read()) {
+  if (MIDI.read()) {
 
-  // -------------------- Note On
-  if (MIDI.getType() == midi::NoteOn && MIDI.getChannel() == MIDI_CHANNEL) {
-    midiNote = MIDI.getData1();
-    velocity = MIDI.getData2();
-    noteOn(midiNote, velocity);
-    for (int i = 0; i < NUM_VOICES; i++) {
-       debugPrint(i);
+    // -------------------- Note On
+    if (MIDI.getType() == midi::NoteOn && MIDI.getChannel() == MIDI_CHANNEL) {
+      midiNote = MIDI.getData1();
+      velocity = MIDI.getData2();
+      noteOn(midiNote, velocity);
+      for (int i = 0; i < NUM_VOICES; i++) {
+        debugPrint(i);
+      }
     }
-  }
     
-  // -------------------- Note Off
-  if (MIDI.getType() == midi::NoteOff && MIDI.getChannel() == MIDI_CHANNEL) {
-    midiNote = MIDI.getData1();
-      noteOff(midiNote);
-    for (int i = 0; i < NUM_VOICES; i++) {
-      debugPrint(i);
+    // -------------------- Note Off
+    if (MIDI.getType() == midi::NoteOff && MIDI.getChannel() == MIDI_CHANNEL) {
+      midiNote = MIDI.getData1();
+        noteOff(midiNote);
+      for (int i = 0; i < NUM_VOICES; i++) {
+        debugPrint(i);
+      }
     }
-  }
 
     // ------------------ Pitchbend 
     if (MIDI.getType() == midi::PitchBend && MIDI.getChannel() == MIDI_CHANNEL) {
-      pitchBend = MIDI.getData1() | (MIDI.getData2() << 7);
+      pitchBend = (MIDI.getData2() << 7) | MIDI.getData1(); // already 14 bits = Volts out
+      Serial.println("Bender: " + String(pitchBend));
     }
 
     // ------------------ Aftertouch 
@@ -276,11 +273,9 @@ if (MIDI.read()) {
       knobNumber = MIDI.getData1();
       knobValue = MIDI.getData2();
       if (knobNumber >69 && knobNumber <88) {
-      // ...
+        // ...
       }
     }
-
-    
   }
 
 	  //  float semitone_ratio = pow(2.0, 1.0/12.0);
