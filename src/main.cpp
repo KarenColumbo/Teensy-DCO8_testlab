@@ -167,6 +167,13 @@ void unsustainNotes() {
         noteOff(voices[i].midiNote);
       //}
     }
+    
+      Serial.print("Voice #" + String(i));
+      Serial.print(": ");
+      Serial.print(voices[i].midiNote);
+      Serial.print(" -> Sustain ");
+      Serial.println(voices[i].sustained);
+    
   }
 }
 
@@ -207,7 +214,7 @@ if (MIDI.read()) {
       Serial.print("Voice #" + String(i));
       Serial.print(": ");
       Serial.print(voices[i].midiNote);
-      Serial.print(" --- ");
+      Serial.print(" -> Sustain ");
       Serial.println(voices[i].sustained);
     }
   }
@@ -220,7 +227,7 @@ if (MIDI.read()) {
       Serial.print("Voice #" + String(i));
       Serial.print(": ");
       Serial.print(voices[i].midiNote);
-      Serial.print(" --- ");
+      Serial.print(" -> Sustain ");
       Serial.println(voices[i].sustained);
     }
   }
