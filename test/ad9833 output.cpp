@@ -21,6 +21,17 @@
 #define AD9833_CMD_PSEL1 0x0100
 #define AD9833_CMD_RESET 0x0100
 
+// Define the analog input pin for the LFO signal
+const int LFO_PIN = A0;
+
+// Define the range of the LFO signal in volts
+const float LFO_MIN_VOLTS = 0.0;
+const float LFO_MAX_VOLTS = 3.0;
+
+// Define the range of LFO depth in semitones
+const float LFO_MIN_SEMITONES = -12.0;
+const float LFO_MAX_SEMITONES = 12.0;
+
 #define NUM_VOICES 8
 #define MIDI_CHANNEL 1
 const int DETUNE = 0;
@@ -72,7 +83,7 @@ const unsigned int noteVolt[73] = {
     bool keyDown;
     uint8_t velocity;
     uint8_t prevNote;
-    uint16_t bentNote;
+    uint16_t bentNoteVolts;
     uint16_t bentNoteFreq;
   };
 
@@ -87,10 +98,13 @@ void initializeVoices() {
     voices[i].keyDown = false;
     voices[i].velocity = 0;
     voices[i].prevNote = 0;
-    voices[i].bentNote = 0;
+    voices[i].bentNoteVolts = 0;
     voices[i].bentNoteFreq = 0;
     }
 }
+
+// SPI settings
+SPISettings AD9833_SPISettings(2000000, MSBFIRST, SPI_MODE2);
 
 void setAD9833TriangleWave(float frequency) {
   // Calculate the frequency tuning word (28 bits)
@@ -119,10 +133,7 @@ void setAD9833TriangleWave(float frequency) {
   SPI.endTransaction();
 }
 
-// SPI settings
-SPISettings AD9833_SPISettings(2000000, MSBFIRST, SPI_MODE2);
-
-// Function to set the AD9833 frequency to a given value (in Hz)
+/*// Function to set the AD9833 frequency to a given value (in Hz)
 void setAD9833Frequency(float frequency) {
   // Calculate the frequency tuning word (28 bits)
   uint32_t freqWord = (uint32_t)(frequency * pow(2.0, 28.0) / 1000000.0);
@@ -146,9 +157,17 @@ void setAD9833Frequency(float frequency) {
   SPI.transfer16(AD9833_CMD_WR | AD9833_CMD_PSEL0 | 0x0000);
 
   SPI.endTransaction();
+} */
+
+void applyLFO(float &freq) {
+  // Read the voltage on the LFO input pin and map it to the range of LFO depth
+  float lfoVolts = (float)analogRead(LFO_PIN) / 4095.0 * (LFO_MAX_VOLTS - LFO_MIN_VOLTS) + LFO_MIN_VOLTS;
+  float lfoDepth = (lfoVolts - LFO_MIN_VOLTS) / (LFO_MAX_VOLTS - LFO_MIN_VOLTS) * (LFO_MAX_SEMITONES - LFO_MIN_SEMITONES) + LFO_MIN_SEMITONES;
+  
+  // Calculate the pitch-bent frequency based on the LFO depth
+  double factor = pow(2.0, lfoDepth / 12.0);
+  freq *= factor;
 }
-
-
 
 // ------------------------ Debug Print
 void debugPrint(int voice) {
@@ -355,14 +374,17 @@ void loop() {
     midiNoteVoltage = noteVolt[voices[i].midiNote];
     double semitones = (double)benderValue / (double)16383 * 2.0;
     double factor = pow(2.0, semitones / 12.0);
-    voices[i].bentNote = midiNoteVoltage * factor;
+    voices[i].bentNoteVolts = midiNoteVoltage * factor;
     voices[i].bentNoteFreq = noteFrequency[i] * factor;
-    if (voices[i].bentNote < 0) {
-      voices[i].bentNote = 0;
+    if (voices[i].bentNoteVolts < 0) {
+      voices[i].bentNoteVolts = 0;
     }
-    if (voices[i].bentNote > 16383) {
-      voices[i].bentNote = 16383;
+    if (voices[i].bentNoteVolts > 16383) {
+      voices[i].bentNoteVolts = 16383;
     }
-  }	
+    float freq = (float)voices[i].bentNoteFreq;
+    applyLFO(freq);
+    setAD9833TriangleWave(freq);
+    }
 }
 
