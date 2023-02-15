@@ -39,7 +39,7 @@ uint8_t midiController[10];
 bool susOn = false;
 uint8_t midiNote = 0;
 uint8_t velocity = 0;
-double pitchBendHz = 0;
+double pitchBendFreq = 0;
 int pitchBendVolts = 8192;
 uint8_t aftertouch = 0;
 uint8_t modulationWheel = 0;
@@ -293,7 +293,7 @@ void loop() {
     // ------------------ Pitchbend 
     if (MIDI.getType() == midi::PitchBend && MIDI.getChannel() == MIDI_CHANNEL) {
       pitchBendVolts = MIDI.getData2() << 7 | MIDI.getData1(); // already 14 bits = Volts out
-      pitchBendHz = map((MIDI.getData2() << 7 | MIDI.getData1()), 0, 16383, PITCH_BEND_RANGE, 0 - PITCH_BEND_RANGE);
+      pitchBendFreq = map((MIDI.getData2() << 7 | MIDI.getData1()), 0, 16383, PITCH_BEND_RANGE, 0 - PITCH_BEND_RANGE);
       
     }
 
@@ -337,7 +337,7 @@ void loop() {
   for (int i = 0; i < NUM_VOICES; i++) {
     // Calculate pitchbender factor
     midiNoteVoltage = noteVolt[voices[i].midiNote];
-    double pitchBendPosition = (double)pitchBendHz / (double)16383 * 2.0;
+    double pitchBendPosition = (double)pitchBendFreq / (double)16383 * 2.0;
     double factor = pow(2.0, pitchBendPosition / 12.0);
     voices[i].bentNoteVolts = midiNoteVoltage * factor;
     voices[i].bentNoteFreq = noteFrequency[i] * factor;
