@@ -19,7 +19,7 @@ uint8_t midiController[10];
 bool susOn = false;
 uint8_t midiNote = 0;
 uint8_t velocity = 0;
-float pitchBend = 8192;
+double pitchBendHz = 0;
 int pitchBendVolts = 8192;
 uint8_t aftertouch = 0;
 uint8_t modulationWheel = 0;
@@ -60,7 +60,7 @@ const unsigned int noteVolt[73] = {
     bool keyDown;
     uint8_t velocity;
     uint8_t prevNote;
-    uint16_t bentNote;
+    uint16_t bentNoteVolts;
     uint16_t bentNoteFreq;
   };
 
@@ -75,15 +75,10 @@ void initializeVoices() {
     voices[i].keyDown = false;
     voices[i].velocity = 0;
     voices[i].prevNote = 0;
-    voices[i].bentNote = 0;
+    voices[i].bentNoteVolts = 0;
     voices[i].bentNoteFreq = 0;
     }
 }
-
-double pitchBendNoteVoltage(double noteVolt, int midiNote, int pitchBender, double PITCH_BEND_RANGE) {
-    return noteVolt * pow(2, (pitchBender - 8192) / 8192.0 * PITCH_BEND_RANGE / 12.0);
-}
-
 
 // ------------------------ Debug Print
 void debugPrint(int voice) {
@@ -244,7 +239,7 @@ void loop() {
     // ------------------ Pitchbend 
     if (MIDI.getType() == midi::PitchBend && MIDI.getChannel() == MIDI_CHANNEL) {
       pitchBendVolts = MIDI.getData2() << 7 | MIDI.getData1(); // already 14 bits = Volts out
-      pitchBend = map((MIDI.getData2() << 7 | MIDI.getData1()), 0, 16383, PITCH_BEND_RANGE, 0 - PITCH_BEND_RANGE);
+      pitchBendHz = map((MIDI.getData2() << 7 | MIDI.getData1()), 0, 16383, PITCH_BEND_RANGE, 0 - PITCH_BEND_RANGE);
       
     }
 
@@ -288,16 +283,17 @@ void loop() {
   for (int i = 0; i < NUM_VOICES; i++) {
     // Calculate pitchbender factor
     midiNoteVoltage = noteVolt[voices[i].midiNote];
-    double semitones = (double)benderValue / (double)16383 * 2.0;
-    double factor = pow(2.0, semitones / 12.0);
-    voices[i].bentNote = midiNoteVoltage * factor;
+    double pitchBendPosition = (double)pitchBendHz / (double)16383 * 2.0;
+    double factor = pow(2.0, pitchBendPosition / 12.0);
+    voices[i].bentNoteVolts = midiNoteVoltage * factor;
     voices[i].bentNoteFreq = noteFrequency[i] * factor;
-    if (voices[i].bentNote < 0) {
-      voices[i].bentNote = 0;
+    if (voices[i].bentNoteVolts < 0) {
+      voices[i].bentNoteVolts = 0;
     }
-    if (voices[i].bentNote > 16383) {
-      voices[i].bentNote = 16383;
+    if (voices[i].bentNoteVolts > 16383) {
+      voices[i].bentNoteVolts = 16383;
     }
+    //
   }	
 }
 
