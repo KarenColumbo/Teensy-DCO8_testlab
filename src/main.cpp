@@ -1,20 +1,3 @@
-// Physical connection for MCP23S17 and AD9833:
-//
-// For each MCP23S17:
-// - Connect the VCC and GND pins to the 3.3V and GND pins on the Teensy 4.1, respectively.
-// - Connect the SCK, MOSI, and MISO pins to the SCK, MOSI, and MISO pins on the Teensy 4.1, respectively.
-// - Connect the CS pin to a digital pin on the Teensy 4.1 (e.g. pin 10 for the first MCP23S17, and pin 11 for the second MCP23S17).
-// - Connect the A0-A2 pins to GND for the first MCP23S17, and to 3.3V for the second MCP23S17 (or vice versa).
-// - Connect the SDA and SCL pins to the SDA and SCL pins on the Teensy 4.1, respectively, for both MCP23S17s (using the same I2C bus).
-//
-// For each AD9833:
-// - Connect the FSYNC pin to a separate digital pin on the MCP23S17 it is connected to (e.g. GPA0 to MCP23S17 1, GPA1 to MCP23S17 1, GPB0 to MCP23S17 2, GPB1 to MCP23S17 2, etc).
-// - Connect the SCLK pin to the SCK pin of the MCP23S17 it is connected to.
-// - Connect the SDATA pin to the MOSI pin of the MCP23S17 it is connected to.
-//
-// Make sure to use appropriate decoupling capacitors near each MCP23S17 and AD9833, and to follow good wiring and grounding practices.
-
-
 #include <stdint.h>
 #include <Arduino.h>
 #include <MIDI.h>
@@ -116,21 +99,6 @@ void debugPrint(int voice) {
   Serial.print("\t -> Sustained: ");
   Serial.println(voices[voice].sustained);
 }
-
-// ------------------------ Initialize 23S17s
-// Define the SPI settings for the MCP23S17 chips
-const SPISettings MCP23S17_SPISettings(1000000, MSBFIRST, SPI_MODE0);
-
-// Define the hardware addresses of the MCP23S17 chips (based on their A0, A1, A2 pin connections)
-const uint8_t MCP23S17_ADDRESS_BASE = 0x20;
-
-// Define the pin numbers of the MCP23S17 chips that are connected to the AD9833s
-const uint8_t AD9833_MCP23S17_PIN_1 = 0;
-const uint8_t AD9833_MCP23S17_PIN_2 = 1;
-
-// Initialize the MCP23S17 chips
-Adafruit_MCP23X17 mcp1;
-Adafruit_MCP23X17 mcp2;
 
 // ------------------------ Voice buffer subroutines 
 int findOldestVoice() {
@@ -242,25 +210,6 @@ MIDI_CREATE_INSTANCE(HardwareSerial, Serial1,  MIDI);
 void setup() {
 	Serial.begin(9600);
   MIDI.begin(MIDI_CHANNEL);
-
-  SPI.begin();
-
-  // Initialize the SPI interface
-  SPI.begin();
-
-  // Initialize the MCP23S17 chips over SPI
-  mcp1.begin_SPI(AD9833_MCP23S17_PIN_1);
-  mcp2.begin_SPI(AD9833_MCP23S17_PIN_2);
-
-  // Set the MCP23S17's I/O direction
-  mcp1.pinMode(0, OUTPUT);
-  mcp1.pinMode(1, OUTPUT);
-  mcp1.pinMode(2, OUTPUT);
-  mcp1.pinMode(3, OUTPUT);
-  mcp2.pinMode(0, OUTPUT);
-  mcp2.pinMode(1, OUTPUT);
-  mcp2.pinMode(2, OUTPUT);
-  mcp2.pinMode(3, OUTPUT);
 }
 
 // ************************************************
